@@ -28,6 +28,7 @@ if __name__ == "__main__":
     if len(args.name) == 1:
         final_name = args.name[0]
         just_protein_name = True
+
     else:
         final_name = ''
         for i in args.name:
@@ -44,6 +45,10 @@ if __name__ == "__main__":
 
     # get sequence
     sequence = seq_and_name[1]
+
+    protein_name = full_uniprot_id.split('|')[2].split('_')[0]
+
+
 
     # Try to get the name of the organism, if you can't no worries.
     try:
@@ -68,11 +73,23 @@ if __name__ == "__main__":
 
     # set the title to contain the input name, the organism that was found (if possible)
     # and the short form of the uniprot ID
-    if organism != '' and just_protein_name == True:
-        final_title = '>' + organism + '_' + final_name + '_' + f'{short_uniprot_id}'
+    if organism != '':
+        if just_protein_name == True:
+            final_title = '>' + organism + '_' + final_name + '_' + f'{short_uniprot_id}'
+        else:
+            final_title = '>' + organism + '_' + protein_name + '_' + f'{short_uniprot_id}'
     else:
-        final_title = '>' + final_name + ' ' + f'{short_uniprot_id}'
+        final_title = '>' + final_name + '_' + f'{short_uniprot_id}'
 
+    # get rid of spaces in final title
+    new_title = ''
+    for i in final_title:
+    	if i == ' ':
+    		new_title += '_'
+    	else:
+    		new_title += i
+
+    final_title = new_title
 
     # figure out what to print if anything
     if print_uniprot==True:

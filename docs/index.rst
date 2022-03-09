@@ -11,7 +11,8 @@ Welcome to getSequence's documentation!
    :caption: Contents:
 
    getting_started
-   api
+   /usage/command-line
+   /usage/using-in-python
 
 
 

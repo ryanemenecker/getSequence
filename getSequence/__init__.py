@@ -1,7 +1,7 @@
 """A CLI to get a uniprot sequence returned to terminal"""
 
 # Add imports here
-from .get_sequence import *
+from .getseq import getseq as getseq
 
 # Handle versioneer
 from ._version import get_versions
