@@ -1,5 +1,5 @@
 *********************************
-Getting Started with metapredict
+Getting Started with getSequence
 *********************************
 
 What is getSequence?
@@ -39,3 +39,5 @@ To clone the GitHub repository and gain the ability to modify a local copy of th
 	$ pip install .
 
 This will install **getSequence** locally. If you modify the source code in the local repository, be sure to re-install with `pip`.
+
+For documentation, see https://getsequence.readthedocs.io/en/latest/getting_started.html

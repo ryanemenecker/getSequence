@@ -30,6 +30,10 @@ To clone the GitHub repository and gain the ability to modify a local copy of th
 	$ cd getSequence
 	$ pip install .
 
+
+For documentation, see https://getsequence.readthedocs.io/en/latest/getting_started.html
+
+
 This will install **getSequence** locally.
 
 # Usage:
