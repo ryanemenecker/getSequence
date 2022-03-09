@@ -19,7 +19,7 @@ Fair enough. I still think it's nifty.
 
 **getSequence** in availbale through PyPi - to install just run...
 
-	$ pip install getsequence
+	$ pip install getSequence
 
 
 Alternatively, you can get **getSequence** directly from GitHub. 

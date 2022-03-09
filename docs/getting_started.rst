@@ -25,7 +25,7 @@ Installation
 
 .. code-block:: bash
 
-	$ pip install getsequence
+	$ pip install getSequence
 
 
 Alternatively, you can get **getSequence** directly from GitHub. 
