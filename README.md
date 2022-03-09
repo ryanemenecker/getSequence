@@ -1,11 +1,26 @@
 getSequence
 ==============================
-[//]: # (Badges)
-[![GitHub Actions Build Status](https://github.com/REPLACE_WITH_OWNER_ACCOUNT/getSequence/workflows/CI/badge.svg)](https://github.com/REPLACE_WITH_OWNER_ACCOUNT/getSequence/actions?query=workflow%3ACI)
-[![codecov](https://codecov.io/gh/REPLACE_WITH_OWNER_ACCOUNT/getSequence/branch/master/graph/badge.svg)](https://codecov.io/gh/REPLACE_WITH_OWNER_ACCOUNT/getSequence/branch/master)
+
+A tool to get a uniprot sequence returned to terminal or from within Python.
+
+# What is getSequence?
+
+getSequence is a command-line interface for printing protein sequences from Uniprot to your terminal. I made this because I was tired of having to navigate to the website, copy a sequence, and format it. It also has functionality to use in Python.
+
+# How does it work?
+
+getSequence will take in your name and query Uniprot. It then takes the top hit from Uniprot and gets the sequence information. You can specify multiple things from the command-line or form Python, exactly how you would if you were to use the search box on the Uniprot website.
+
+# This seems kind of unnecessary...
+
+Fair enough. I still think it's nifty.
+
+# Installation
 
 
-A CLI to get a uniprot sequence returned to terminal
+
+
+
 
 ### Copyright
 
