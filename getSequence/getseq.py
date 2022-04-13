@@ -15,6 +15,7 @@ import sys
 import urllib3
 
 from getSequence.get_sequence import seq_from_name as _seq_from_name
+from getSequence.get_sequence import fetch_sequence as _fetch_sequence
 from getSequence.getsequence_exceptions import RetreiveSequenceError
 
 def getseq(name, just_sequence=False):
@@ -37,12 +38,19 @@ def getseq(name, just_sequence=False):
 		[1] = Protein sequence
 		[2] = Just the Uniprot ID
 	'''
-	fullID_seq_name = _seq_from_name(name)
 
-	if just_sequence == True:
-		return fullID_seq_name[1]
-	else:
-		return fullID_seq_name
+	try:
+		fullID_seq_name = _seq_from_name(name)
+		if just_sequence == True:
+			return fullID_seq_name[1]
+		else:
+			return fullID_seq_name
+	except:
+		if just_sequence == False:
+			return _fetch_sequence(name, return_full_id=True)
+		else:
+			return _fetch_sequence(name)		
 
 
+print(getseq('p53', just_sequence=False))
 
