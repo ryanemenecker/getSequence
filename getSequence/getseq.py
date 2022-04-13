@@ -52,3 +52,8 @@ def getseq(name, just_sequence=False):
 			return _fetch_sequence(name)		
 
 
+
+
+
+
+

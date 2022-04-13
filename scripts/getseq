@@ -7,7 +7,7 @@ import os
 import argparse
 
 # import functionality to get a sequence
-from getSequence.get_sequence import seq_from_name
+from getSequence.getseq import getseq as seq_from_name
 
 
 if __name__ == "__main__":
@@ -81,6 +81,15 @@ if __name__ == "__main__":
     else:
         final_title = '>' + final_name + '_' + f'{short_uniprot_id}'
 
+    # make sure uniprot ID not in twice
+    list_of_title_parts = final_title.split('_')
+    if list_of_title_parts[-1] == list_of_title_parts[-2]:
+        final_title = ''
+        for i in list_of_title_parts[:len(list_of_title_parts)-1]:
+            final_title += i
+            final_title += '_'
+        final_title = final_title + protein_name
+
     # get rid of spaces in final title
     new_title = ''
     for i in final_title:
@@ -100,4 +109,6 @@ if __name__ == "__main__":
     else:
         print(final_title)
         print(sequence)
+
+
 
