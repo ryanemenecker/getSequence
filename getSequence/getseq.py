@@ -52,5 +52,3 @@ def getseq(name, just_sequence=False):
 			return _fetch_sequence(name)		
 
 
-print(getseq('p53', just_sequence=False))
-
