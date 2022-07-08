@@ -5,6 +5,9 @@ __pycache__/
 
 # C extensions
 *.so
+# ds store
+.DS_Store
+/getSequence/.DS_Store
 
 # Distribution / packaging
 .Python

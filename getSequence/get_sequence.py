@@ -1,62 +1,48 @@
 # code for pulling down uniprot sequence for predictions
 # currently using this code as is in Metapredict. 
-import urllib3
 from getSequence.getsequence_exceptions import RetreiveSequenceError
+import requests
 
-
-def fetch_sequence(uniprot_id, return_full_id=False):
-    """
-    Function that returns the amino acid sequence by polling UniProt.com
-
-    Note that right now the test for success is a bit hap-hazard (looks for the
-    string "Sorry", which appears if the UniProt call fails. We probably want
-    something a bit more robust in the future...
-
-    Parameters
-    --------------
-    uniprot_id : str
-        Uniprot accession number
-
-    return_full_id : bool
-        Whether to return the full uniprot ID. If set to True,
-        returns a list where the first element is the full uniprot ID, the
-        second element is the sequence, and the third element is
-        the short uniprot ID.
-
-    Returns
-    -----------
-    str or None:
-        If the call is succesfull, this returns the amino acid string. If not, it returns
-        None. 
-
-    """
-
-    http = urllib3.PoolManager()
-    r = http.request('GET', 'https://www.uniprot.org/uniprot/%s.fasta' % (uniprot_id))
-    
-    y = "".join(str(r.data).split('\\n')[:1]).replace("'", "")[1:]
-
-    s = "".join(str(r.data).split('\\n')[1:]).replace("'", "")
-    
-    # make sure that the last character is not a " due to a ' in protein name
-    # Thank you to Github user keithchev for pointing out this bug!
-    if s[len(s)-1] == '"':
-        s = s[:len(s)-1]
-
-    if s.find('Sorry') > -1:
-        raise RetreiveSequenceError('Error: unable to fetch UniProt sequence with accession %s'%(uniprot_id))
-
-    if return_full_id == False:
-        return s
-
-    else:
-        return [y, s, uniprot_id]
-
-
-
-def seq_from_name(name):
+def parse_input(user_input):
     '''
-    Function to get the sequence of a protein from the name. 
+    function to parse
+    out info that the user is trying
+    to search and formats it for the uniprot
+    query
+    '''
+
+    # first split the user input
+    user_input_list = user_input.split(' ')
+
+    #now make it all lowercase
+    lower_input = []
+    for i in user_input_list:
+        lower_input.append(i.lower())
+
+    # list of vals to strip out of the name.
+    strip_list = ['maize', 'zea', 'corn', 'arath', 'arabidopsis', 'thaliana', 'mus', 'musculus', 'mouse', 'zebrafish', 'zebra', 'fish', 'danio', 'rerio', 'candida', 'albicans', 'fruit', 'fly', 'drosophila', 'melanogaster', 'plasmodium', 'falciparum', 'malaria', 'caenorhabditis', 'elegans', 'nematode', 'nematodes', 'dictyostelium', 'discoideum', 'slime', 'mold', 'dictyo', 'saccharomyces', 'cerevisiae', 'budding', 'bakers', 'schizosaccharomyces', 'pombe', 'fission', 'rattus', 'norvegicus', 'rat', 'homo', 'sapiens', 'sapien', 'human', 'humans', 'leishmania', 'infantum', 'glycine', 'max', 'soy', 'soybean', 'bean', 'oryza', 'sativa', 'rice']
+
+    # strip out names
+    non_organismal = []
+    for i in lower_input:
+        if i not in strip_list:
+            non_organismal.append(i)
+
+    taxid=''
+
+    # now go through it to get out the useful components
+    organism_ids = {'4577':['maize', 'zea', 'corn'], '3702':['arath', 'arabidopsis', 'thaliana'], '10090':['mus', 'musculus', 'mouse'], '7955':['zebrafish', 'zebra', 'fish', 'danio', 'rerio'], '5476':['candida', 'albicans'], '7227': ['fruit', 'fly', 'drosophila', 'melanogaster'], '5833':['plasmodium', 'falciparum', 'malaria'], '6239':['caenorhabditis', 'elegans', 'nematode', 'nematodes', 'worm'], '44689':['dictyostelium', 'discoideum', 'slime', 'mold', 'dictyo'], '559292':['saccharomyces', 'cerevisiae', 'budding', 'bakers'], '4896':['schizosaccharomyces', 'pombe', 'fission'], '10116':['rattus', 'norvegicus', 'rat'], '9606':['homo', 'sapiens', 'sapien', 'human', 'humans'], '5671':['leishmania', 'infantum'], '3847':['glycine', 'max', 'soy','soybean', 'bean'], '4530':['oryza', 'sativa', 'rice']}
+    for i in organism_ids.keys():
+        for usrinput in user_input_list:
+            if usrinput in organism_ids[i]:
+                taxid = i
+
+    return {'taxid': taxid, 'gene_info': non_organismal}
+
+
+def seq_from_uniprot(name):
+    '''
+    Function to get the uniprot_id of a protein from the name. 
 
     Parameters
     ----------
@@ -65,11 +51,9 @@ def seq_from_name(name):
         contain the name of the protein as well as the name of the organims.
             ex. ARF19
                 Arabidopsis ARF19
-
                 p53
                 Human p53
                 Homo sapiens p53
-
 
     Returns
     -------
@@ -78,78 +62,116 @@ def seq_from_name(name):
         website.
     '''
 
-
-
     # first format name into a url
     # uses only reviewed
-    name = name.split(' ')
-    if len(name) == 1:
-        # this url does not filter for the reviewed proteins
-        # leaving as a backup
-        # use_url = f'https://www.uniprot.org/uniprot/?query={name[0]}&sort=score'
-
-        use_url = f'https://www.uniprot.org/uniprot/?query={name[0]}&fil=reviewed%3Ayes&sort=score'
-
-
+    split_name = name.split(' ')
+    query_keywords = split_name[0]
+    if len(split_name) == 1:
+        use_url=f'https://rest.uniprot.org/uniprotkb/search?size=15&format=fasta&query={split_name[0]}%20AND%20%28reviewed%3Atrue%29'
     else:
-        add_str = ''
-        for i in name:
-            add_str += i
-            add_str += '%20'
-        add_str = add_str[0:len(add_str)-3]
-        # this url does not filter for the reviewed proteins
-        # leaving as a backup
-        #use_url = f'https://www.uniprot.org/uniprot/?query={add_str}&sort=score'
-
-        # one below filters for the reviewed proteins.
-        use_url = f'https://www.uniprot.org/uniprot/?query={add_str}&fil=reviewed%3Ayes&sort=score'
-
-    # set http
-    http = urllib3.PoolManager()
-    # get r
-    r = http.request('GET', use_url)
-
-    if b'Sorry, no results found for your search term.' in r.data:
-        if len(name) == 1:
-            # this url does not filter for the reviewed proteins
-            use_url = f'https://www.uniprot.org/uniprot/?query={name[0]}&sort=score'
-
-        else:
+        split_name = parse_input(name)
+        if split_name['taxid']=='':
+            add_vals = split_name['gene_info']
+            query_keywords = split_name['gene_info']
             add_str = ''
-            for i in name:
+            for i in add_vals:
                 add_str += i
                 add_str += '%20'
             add_str = add_str[0:len(add_str)-3]
-            # this url does not filter for the reviewed proteins
-            use_url = f'https://www.uniprot.org/uniprot/?query={add_str}&sort=score'
+            # one below filters for the reviewed proteins.
+            use_url = f'https://rest.uniprot.org/uniprotkb/search?format=fasta&size=15&query={add_str}%20AND%20%28reviewed%3Atrue%29'
+        else:
+            add_vals = split_name['gene_info']
+            query_keywords = split_name['gene_info']
+            add_str = ''
+            for i in add_vals:
+                add_str += i
+                add_str += '%20'
+            add_str = add_str[0:len(add_str)-3]
+            # one below filters for the reviewed proteins.
+            use_url = f"https://rest.uniprot.org/uniprotkb/search?format=fasta&size=15&query={add_str}%20AND%20%28reviewed%3Atrue%29%20AND%20%28model_organism%3A{split_name['taxid']}%29"
 
-        # set http
-        http = urllib3.PoolManager()
-        # get r
-        r = http.request('GET', use_url)
+    # pull top 5 fastas
+    top_five = requests.get(use_url).text
 
-        if b'Sorry, no results found for your search term.' in r.data:
-            raise RetreiveSequenceError('Sorry! We were not able to find the protein corresponding to that name.')
+    # do general query if top 5 fails
+    if top_five == '':
+        add_vals = name.split(' ')
+        query_keywords = name.split(' ')
+        add_str = ''
+        for i in add_vals:
+            add_str += i
+            add_str += '%20'
+        add_str = add_str[0:len(add_str)-3]
+        # one below filters for the reviewed proteins.
+        use_url = f'https://rest.uniprot.org/uniprotkb/search?format=fasta&size=15&query={add_str}%20AND%20%28reviewed%3Atrue%29'
+    
+    top_five = requests.get(use_url).text
 
-    # now that the url is figured out and the data fetched, parse it to get the uniprot ids.
-    parsed_data=r.data.split(b'checkbox_')
-    # take the top uniprot ID from the page
-    first_hit = str(parsed_data[1])[2:]
-    # now format the top hit so it is just the uniprot ID
-    top_hit = (first_hit.split('"')[0])
-    org = first_hit.split('taxonomy')
-    organism_name = (org[1].split('>')[1].split('<')[0])
-    organism_name = organism_name.split()
-    final_name = ''
-    for val in organism_name:
-        final_name += val
-        final_name += '_'
-    final_name = final_name[:len(final_name)-1]
+ 
 
-    # return the top hit as a list where the first element is the 
-    # uniprot ID and the second element is the sequence
-    return fetch_sequence(top_hit, return_full_id=True)
+    # header placeholder
+    header = ''
+    final_vals = []
+    # now try to get right fasta
+    fastas_split = top_five.split('>')[1:]
+    
+    most_matches = 0
+    best_seq=''
 
+    for header_seq in fastas_split:
+        temp_seq = ''
+        split_by_lines = header_seq.split('\n')
+        header = split_by_lines[0].lower()
+        temp_header = ''
+        for i in header:
+            if i == '_':
+                temp_header += ' '
+            else:
+                temp_header += i
+        header=temp_header
+
+        if type(query_keywords) == str:
+
+            if query_keywords in header:
+                for chars in split_by_lines[1:]:
+                    temp_seq+=chars
+                final_vals = [header, temp_seq]
+                return final_vals
+        
+        else:
+            gene_name = header.split('gn=')[1].split(' ')[0]
+            organism_name = header.split('ox=')[1].split(' ')[0]
+            cur_matches=0
+            for i in query_keywords:
+                if i in header:
+                    cur_matches += 1
+                    if i == gene_name:
+                        cur_matches += 2
+                    if parse_input(name)['taxid'] != '':
+                        if i == parse_input(name)['taxid']:
+                            cur_matches += 1
+            if cur_matches > most_matches:
+                temp_seq=''
+                most_matches = cur_matches
+                for chars in split_by_lines[1:]:
+                    temp_seq+=chars
+                best_seq = temp_seq
+                final_vals = [header, best_seq]
+    
+    if final_vals != []:
+        return final_vals
+
+    else:
+        seq_to_use = fastas_split[0]
+        split_by_lines = seq_to_use.split('\n')
+        header = split_by_lines[0].lower()
+        for chars in split_by_lines[1:]:
+            temp_seq+=chars
+        final_vals = [header, temp_seq]
+        return final_vals
+
+    raise Exception('Unable to find sequence.')
 
 
 
