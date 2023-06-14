@@ -8,6 +8,7 @@ __pycache__/
 # ds store
 .DS_Store
 /getSequence/.DS_Store
+*.DS_Store
 
 # Distribution / packaging
 .Python
