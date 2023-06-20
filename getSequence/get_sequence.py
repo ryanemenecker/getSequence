@@ -74,6 +74,9 @@ def seq_from_uniprot(name):
     split_name = name.split(' ')
     if len(split_name) == 1:
         use_url=f'https://rest.uniprot.org/uniprotkb/search?size=15&format=fasta&query={split_name[0]}%20AND%20%28reviewed%3Atrue%29'
+        top_five = requests.get(use_url).text
+        query_keywords=split_name[0]
+        
     else:
         # format the search string.
         split_name = parse_input(name)
@@ -106,13 +109,15 @@ def seq_from_uniprot(name):
                 top_five = requests.get(use_url).text    
 
     # if using org id before, take out and try agian.
-    if split_name['taxid']!='':
-        if top_five == '':
-            use_url = f'https://rest.uniprot.org/uniprotkb/search?format=fasta&size=15&query={add_str}%20AND%20%28reviewed%3Afalse%29'
-            top_five = requests.get(use_url).text
+    if type(split_name)==dict:
+        if split_name['taxid']!='':
+            if top_five == '':
+                use_url = f'https://rest.uniprot.org/uniprotkb/search?format=fasta&size=15&query={add_str}%20AND%20%28reviewed%3Afalse%29'
+                top_five = requests.get(use_url).text
 
     if top_five == '':
         raise Exception('Unable to find sequence.')
+
 
     # header placeholder
     header = ''
@@ -163,6 +168,7 @@ def seq_from_uniprot(name):
                 best_seq = temp_seq
                 final_vals = [header, best_seq]
     
+
     if final_vals != []:
         return final_vals
 
