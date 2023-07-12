@@ -181,7 +181,7 @@ def seq_from_uniprot(name):
         final_vals = [header, temp_seq]
         return final_vals
 
-    # if we have still failed... well eff.
+    # if we have still failed... well darn.
     raise Exception('Unable to find sequence.')
 
 
