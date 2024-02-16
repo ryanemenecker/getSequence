@@ -47,13 +47,13 @@ def parse_input(user_input):
     return {'taxid': taxid, 'gene_info': non_organismal}
 
 
-def seq_from_uniprot(name):
+def seq_from_name(query):
     '''
     Function to get the uniprot_id of a protein from the name. 
 
     Parameters
     ----------
-    name: string
+    query: string
         A string that carries the details fo the protein to search for. Can 
         contain the name of the protein as well as the name of the organims.
             ex. ARF19
@@ -71,7 +71,7 @@ def seq_from_uniprot(name):
 
     # first format name into a url
     # uses only reviewed on first attempt.
-    split_name = name.split(' ')
+    split_name = query.split(' ')
     if len(split_name) == 1:
         use_url=f'https://rest.uniprot.org/uniprotkb/search?size=15&format=fasta&query={split_name[0]}%20AND%20%28reviewed%3Atrue%29'
         top_five = requests.get(use_url).text
@@ -79,7 +79,7 @@ def seq_from_uniprot(name):
         
     else:
         # format the search string.
-        split_name = parse_input(name)
+        split_name = parse_input(query)
         # if you don't have a taxid, you're hitting the 'feeling lucky' button on early 2000s Google more or less TBH.
         add_vals = split_name['gene_info']
         query_keywords = split_name['gene_info']
@@ -157,8 +157,8 @@ def seq_from_uniprot(name):
                     cur_matches += 1
                     if i == gene_name:
                         cur_matches += 2
-                    if parse_input(name)['taxid'] != '':
-                        if i == parse_input(name)['taxid']:
+                    if parse_input(query)['taxid'] != '':
+                        if i == parse_input(query)['taxid']:
                             cur_matches += 1
             if cur_matches > most_matches:
                 temp_seq=''
@@ -183,5 +183,169 @@ def seq_from_uniprot(name):
 
     # if we have still failed... well darn.
     raise Exception('Unable to find sequence.')
+
+def seq_from_uniprot_id(query):
+    '''
+    function to specifically pull a sequence
+    using a uniprot ID. This will ONLY WORK
+    if you have the correct ID. However,
+    this has the advantage of letting the user
+    pull different isoforms. 
+
+    parameters
+    ----------
+    query : str
+        the uniprot ID as a string
+
+    returns : list
+        list where first element is the seq header
+        and the second is the sequence. 
+    '''
+    # set url and make sure no spaces make it through. 
+    use_url = f'https://rest.uniprot.org/uniprotkb/{query}.fasta'
+    # get text using requests
+    entry = requests.get(use_url).text
+    # split by new line
+    entry = entry.split('\n')
+    # set header
+    header=entry[0]
+    # combine rest of lines into sequence
+    seq=''.join(entry[1:])
+    return [header,seq]
+
+
+## function to handle getting sequence
+def getseq_from_string(query, uniprot_id=False, just_sequence=False,
+    return_dict=False):
+    '''
+    Function to get the sequence from uniprot.
+
+    Parameters
+    -----------
+    query : str
+        The query to use to search uniprot
+
+    uniprot_id : bool
+        Whether your query is a uniprot ID. The main
+        purpose of this functionality is to allow you 
+        to pull different protein isoforms because simply
+        querying uniprot doesn't gaurantee return of that sequence.
+        However, using UniprotID-Number where Number is equal to the
+        specific isoform (ex. O000327-1 pulls the first isoform of O000327)
+        will gaurantee that specific sequence is returned.
+
+    just_sequence : bool
+        Whether to return just the sequence.
+
+    return_dict : bool
+        Whether to return the sequnces as a dict
+        instead of a list. 
+        If True, returns a dict with the header as the key and the sequence as the value. 
+
+
+    Returns
+    -------
+    By default, returns a list where:
+        [0] = full Uniprot ID
+        [1] = Protein sequence
+    '''
+    # if not a uniprot ID, do a standard uniprot query and pull the top sequence. 
+    if uniprot_id == False:
+        try:
+            fullID_seq_name = seq_from_name(query)
+        except:
+            raise RetreiveSequenceError('Unable to retrieve sequence.')
+    else:
+        # otherwise, use the uniprot ID explicitly
+        try:
+            fullID_seq_name = seq_from_uniprot_id(query)
+        except:
+            raise RetreiveSequenceError('Unable to retrieve sequence.')
+
+    # if the user wants just the sequence, return just the sequence
+    if just_sequence == True:
+        return fullID_seq_name[1]
+    else:
+        # if user wants a dict, change to return a dict 
+        if return_dict==True:
+            fullID_seq_name = {fullID_seq_name[0]:fullID_seq_name[1]}
+        return fullID_seq_name
+
+def get_seqs_from_list(query, uniprot_id=False, just_sequence=False,
+    return_dict=False, ignore_failures=False):
+    '''
+    Function to get the sequence from uniprot.
+
+    Parameters
+    -----------
+    query : list
+        A list of queries to search. 
+
+    uniprot_id : bool
+        Whether your query is a uniprot ID. The main
+        purpose of this functionality is to allow you 
+        to pull different protein isoforms because simply
+        querying uniprot doesn't gaurantee return of that sequence.
+        However, using UniprotID-Number where Number is equal to the
+        specific isoform (ex. O000327-1 pulls the first isoform of O000327)
+        will gaurantee that specific sequence is returned.
+
+    just_sequence : bool
+        Whether to return just the sequence.
+
+    return_dict : bool
+        Whether to return the sequnces as a dict
+        instead of a list. 
+        If True, returns a dict with the header as the key and the sequence as the value. 
+
+    ignore_failures : bool
+        Whether to ignore failures and continue with the 
+        rest of the queries.
+        Will print the failures. 
+
+
+    Returns
+    -------
+    By default, returns a list where:
+        [0] = full Uniprot ID
+        [1] = Protein sequence
+    '''
+    all_queries={}
+    failed_queries=[]
+    # iterate over list
+    for q in query:
+        try:
+            q_vals=getseq_from_string(q, uniprot_id=uniprot_id, just_sequence=False, return_dict=True)
+            if all_queries=={}:
+                all_queries=q_vals
+            else:
+                all_queries.update(q_vals)
+        except:
+            if ignore_failures==False:
+                raise RetreiveSequenceError('Unable to retrieve sequence.')
+            else:
+                failed_queries.append(f"Unable to retrieve sequence for the query '{q}'")
+
+    # see if we need to turn this into a list. 
+    if return_dict==False:
+        return_vals=[]
+        for k,v in all_queries.items():
+            if just_sequence==False:
+                return_vals.append([k,v])
+            else:
+                return_vals.append(v)
+    else:
+        return_vals=all_queries
+
+    # if we have failed queries, print them. 
+    if len(failed_queries)>0:
+        print('Failed queries:')
+        for fq in failed_queries:
+            print(fq)
+    
+    # return the values
+    return return_vals
+
+
 
 
