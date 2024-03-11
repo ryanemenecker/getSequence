@@ -216,6 +216,9 @@ By default, getseq will raise an Exception if it is unable to return a sequence 
 
 ## Changes
 
+### V2.1 (March 2024)
+* Added parallelization for queries h/t jeff
+
 ### V2.0 (February 2024)
 * Major update to command-line and Python functionality
 * Added ability to do multiple queries from a single command from CLI

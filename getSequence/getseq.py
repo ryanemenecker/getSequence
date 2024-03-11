@@ -15,18 +15,22 @@ is rather particular, which has constrained how I update the code
 in getseq. It's honestly easier to have some redundancy here
 than to fix all the bugs I would inevitably introduce in all my
 other packages that use getseq by updating and refactoring this code. 
+
+yerp that code is scary looking - I'm also going to ignore it. ~jeff
 '''
 
 ## Handles the primary functions
 
 # NOTE - any new functions must be added to this list!
-__all__ =  ['getseq']
+__all__ =  ['getseq',"batch_getseq"]
  
 ## main imports 
 import os
 import sys
 import urllib3
 import protfasta
+from multiprocessing import Pool
+from functools import partial
 
 ## internal imports
 from getSequence.get_sequence import getseq_from_string as _getseq_from_string
@@ -108,3 +112,46 @@ def getseq(query, uniprot_id=False, just_sequence=False,
                 return values
     else:
         raise Exception('Query must be a string or a list of strings')
+
+def batch_getseq(queries, **kwargs):
+    '''
+    Parallel version of main user facing functionality to get sequences. 
+
+    Parameters
+    ----------
+    queries : str or list
+        A single query to search for as a string or
+        a list of queries to search for.
+    uniprot_id : bool
+        Whether or not to use the uniprot id.
+    just_sequence : bool
+        Whether or not to just return the sequence.
+    return_dict : bool
+        Whether or not to return a dictionary.
+    ignore_failures : bool
+        Whether or not to ignore failures.
+    output_file : str
+        The output file to write the sequences to.
+
+    Returns
+    -------
+    list or dict
+        If output_file is None,
+            by default returns a nested list where the first element 
+            in each list is the uniprot header and the second is the sequence. 
+            If return_dict is True, returns a dictionary where the keys are the 
+            uniprot headers and the values are the sequences.
+        If output_file is not None,
+            None. Just saves the output. 
+
+    '''
+    with Pool() as pool:
+        process_query_with_kwargs = partial(__process_query, **kwargs)
+        results = pool.map(process_query_with_kwargs, queries)
+    return results
+
+def __process_query(query, **kwargs):
+    return getseq(query, **kwargs)
+
+
+
