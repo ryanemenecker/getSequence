@@ -145,6 +145,8 @@ def batch_getseq(queries, **kwargs):
             None. Just saves the output. 
 
     '''
+    if isinstance(queries, str):
+        queries=([queries])
     with Pool() as pool:
         process_query_with_kwargs = partial(__process_query, **kwargs)
         results = pool.map(process_query_with_kwargs, queries)
