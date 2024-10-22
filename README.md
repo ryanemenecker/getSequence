@@ -215,6 +215,9 @@ Unable to retrieve sequence for the query ' doggggggg p53'
 
 ## Changes
 
+### V2.2 (October 2024)
+* Made pep517 compliant, now using tomls. h/t alex
+
 ### V2.1 (March 2024)
 * Added parallelization for queries h/t jeff
 
