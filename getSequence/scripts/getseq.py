@@ -10,7 +10,7 @@ import argparse
 from getSequence.getseq import getseq as get
 
 
-if __name__ == "__main__":
+def main():
     # Parse command line arguments.
     parser = argparse.ArgumentParser(description='Get a sequence from a protein name or UniProt accession number.')
 
