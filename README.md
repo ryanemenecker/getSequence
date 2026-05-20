@@ -239,7 +239,10 @@ Unable to retrieve sequence for the query ' doggggggg p53'
 
 ## Changes
 
-### V3.0
+### V3.0.1 (May 2026)
+* Fixed versioning issue so the update can be published to pypi.
+
+### V3.0 (May 2026)
 * Replaced process-based multiprocessing with thread-based parallel fetching for list, batch, and CLI queries. This is much faster for network-bound UniProt requests and preserves the input order of results.
 * Simplified ``batch_getseq`` so it now uses the same optimized list-query path as ``getseq([...])`` instead of wrapping each query in an extra public-call layer.
 * Added ``max_workers`` for Python list/batch queries and ``--max-workers`` for CLI multi-query runs.

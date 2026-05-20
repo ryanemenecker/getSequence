@@ -10,8 +10,6 @@ __pycache__/
 /getSequence/.DS_Store
 *.DS_Store
 
-getSequence/_version.py
-
 # Distribution / packaging
 .Python
 env/

@@ -17,6 +17,23 @@ def test_getSequence_imported():
     assert "getSequence" in sys.modules
 
 
+def test_package_version_falls_back_to_checked_in_version(monkeypatch):
+    metadata = importlib.import_module("importlib.metadata")
+    package = importlib.import_module("getSequence")
+    original_version = metadata.version
+
+    def raise_package_not_found(_dist_name):
+        raise metadata.PackageNotFoundError
+
+    monkeypatch.setattr(metadata, "version", raise_package_not_found)
+    importlib.reload(package)
+
+    assert package.__version__ == "1+unknown"
+
+    monkeypatch.setattr(metadata, "version", original_version)
+    importlib.reload(package)
+
+
 def test_getseq_writes_to_current_directory(monkeypatch, tmp_path):
     getseq_module = importlib.import_module("getSequence.getseq")
     written = {}
