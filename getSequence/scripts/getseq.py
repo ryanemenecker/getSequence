@@ -5,9 +5,11 @@
 
 import os
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # import functionality to get a sequence
 from getSequence.getseq import getseq as get
+from getSequence.get_sequence import _normalize_max_workers
 
 
 def main():
@@ -25,6 +27,8 @@ def main():
     parser.add_argument('-o', '--output', help='Optional. Use this flag to denote that you want to output the sequences to a file.')
 
     parser.add_argument('-p', '--print_failed_queries', action='store_true', help='Optional. Use this flag to print failed queries when saving the output rather than saving a failed_queries.txt file.')
+
+    parser.add_argument('--max-workers', type=int, default=None, help='Optional. Maximum number of parallel query workers for multiple entries.')
 
     # parse the args
     args = parser.parse_args()
@@ -56,8 +60,7 @@ def main():
         full_output_path = args.output
         # get the path and file
         path = os.path.dirname(full_output_path)
-        file = os.path.basename(full_output_path)
-        if os.path.exists(path)==False:
+        if path != '' and os.path.exists(path)==False:
             raise Exception(f'Path {path} does not exist.')
 
 
@@ -81,26 +84,34 @@ def main():
     if multiple_names==False:
         final_names = [final_names]
 
+    final_names = [final_name.strip() for final_name in final_names if final_name.strip() != '']
+    if final_names == []:
+        raise Exception('At least one query must be provided.')
+
     # list of failures
     failed_queries=[]
 
     # str to hold file output
     output_values=''
 
+    results = [None] * len(final_names)
+    workers = _normalize_max_workers(args.max_workers, len(final_names))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {
+            executor.submit(get, final_name, uniprot_id=use_id): index
+            for index, final_name in enumerate(final_names)
+        }
+        for future in as_completed(futures):
+            index = futures[future]
+            final_name = final_names[index]
+            try:
+                results[index] = future.result()
+            except Exception:
+                failed_queries.append(f"Unable to retrieve sequence for the query '{final_name}'")
+
     # iterate through names
-    for final_name in final_names:
-        # get rid of trailing spaces. 
-        if final_name[-1]==' ':
-            final_name = final_name[:len(final_name)-1]
-        if final_name[0]==' ':
-            final_name = final_name[1:]
-        
-        # try to get query, otherwise print unable to retrieve to user. 
-        try:
-            # sequence and name
-            seq_and_name = get(final_name, uniprot_id=use_id)
-        except:
-            failed_queries.append(f"Unable to retrieve sequence for the query '{final_name}'")
+    for seq_and_name in results:
+        if seq_and_name is None:
             continue
 
         # figure out what to print if anything
@@ -138,8 +149,9 @@ def main():
             if args.print_failed_queries:
                 print(fail_output)
             else:
-                print(f'\nFailed queries saved to {path}/failed_queries.txt')
-                with open(f'{path}/failed_queries.txt', 'w') as f:
+                failed_queries_path = os.path.join(path, 'failed_queries.txt') if path != '' else 'failed_queries.txt'
+                print(f'\nFailed queries saved to {failed_queries_path}')
+                with open(failed_queries_path, 'w') as f:
                     f.write(fail_output)
                 f.close()
 

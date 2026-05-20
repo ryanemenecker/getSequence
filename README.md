@@ -3,9 +3,7 @@ getSequence
 
 A tool to get a protein sequences from Uniprot using a CLI or in Python.
   
-V2 was a major update and was released on February 16, 2024. This massively 
-improved the functionality of getSequence from Python and the CLI as well as
-improving the in code and README.MD documentation.
+V3.0 was a significant update released on May 20, 2026. This update keeps the existing CLI and Python return formats the same while making batch sequence retrieval much faster and more reliable. Multiple queries now use threads, which fits the network-bound UniProt requests better than process-based multiprocessing. Batch calls preserve input order and can be tuned with ``max_workers`` in Python or ``--max-workers`` on the command line.
 
 # What is getSequence?
 
@@ -61,6 +59,8 @@ MTAMEESQSDISLELPLSQETFSGLWKLLPPEDILPSPHCMDDLLLPQDVEEFFEGPSEALRVSGAPAAQDPVTETPGPV
   
 You can also get multiple sequences using a single command by separating your queries by commas. **Multiple entries must be comma separated**.
 
+Multiple command-line queries are fetched in parallel. By default, getSequence uses up to 32 workers and caps that number at the number of queries. You can tune this with ``--max-workers`` if you want fewer simultaneous UniProt requests.
+
 **Example**
 ```bash
 getseq mouse p53, human p53, dog p53
@@ -70,6 +70,11 @@ MTAMEESQSDISLELPLSQETFSGLWKLLPPEDILPSPHCMDDLLLPQDVEEFFEGPSEALRVSGAPAAQDPVTETPGPV
 MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAPTPAAPAPAPSWPLSSSVPSQKTYQGSYGFRLGFLHSGTAKSVTCTYSPALNKMFCQLAKTCPVQLWVDSTPPPGTRVRAMAIYKQSQHMTEVVRRCPHHERCSDSDGLAPPQHLIRVEGNLRVEYLDDRNTFRHSVVVPYEPPEVGSDCTTIHYNYMCNSSCMGGMNRRPILTIITLEDSSGNLLGRNSFEVRVCACPGRDRRTEEENLRKKGEPHHELPPGSTKRALPNNTSSSPQPKKKPLDGEYFTLQIRGRERFEMFRELNEALELKDAQAGKEPGGSRAHSSHLKSKKGQSTSRHKKLMFKTEGPDSD
 >sp|q29537|p53 canlf cellular tumor antigen p53 os=canis lupus familiaris ox=9615 gn=tp53 pe=2 sv=2
 MEESQSELNIDPPLSQETFSELWNLLPENNVLSSELCPAVDELLLPESVVNWLDEDSDDAPRMPATSAPTAPGPAPSWPLSSSVPSPKTYPGTYGFRLGFLHSGTAKSVTWTYSPLLNKLFCQLAKTCPVQLWVSSPPPPNTCVRAMAIYKKSEFVTEVVRRCPHHERCSDSSDGLAPPQHLIRVEGNLRAKYLDDRNTFRHSVVVPYEPPEVGSDYTTIHYNYMCNSSCMGGMNRRPILTIITLEDSSGNVLGRNSFEVRVCACPGRDRRTEEENFHKKGEPCPEPPPGSTKRALPPSTSSSPPQKKKPLDGEYFTLQIRGRERYEMFRNLNEALELKDAQSGKEPGGSRAHSSHLKAKKGQSTSRHKKLMFKREGLDSD
+```
+
+**Example - limit parallel workers**
+```bash
+getseq mouse p53, human p53, dog p53 --max-workers 3
 ```
   
 #### Disabling the separation of multiple entries by commas
@@ -88,6 +93,8 @@ MGSPRAARPPLLLRPVKLLRRRFRLLLALAVVSVGLWTLYLELVASAQVGGNPLNRRYGSWRELAKALASRNIPAVDPHL
 #### Saving the output of a query
 
 If you want to save the output, you can use the ``-o`` or ``--output`` flag. This will save the output to a file to your specified destination.
+
+You can save to a full path or to a file in the current directory.
   
 **Example - multiple sequence**
 ```bash
@@ -95,6 +102,11 @@ getseq mouse p53, human p53, dog p53 -o /Users/thisCoolUser/Desktop/my_sequences
 	
 Sequences saved to /Users/thisCoolUser/Desktop/my_sequences/p53_seqs.fasta
 
+```
+
+**Example - save to the current directory**
+```bash
+getseq mouse p53 -o p53_mouse.fasta
 ```
   
 **NOTE** - by default, if you have any queries that fail **and** you're saving the output, getseq will save a second file called 'failed_queries.txt' that contains all queries that failed. getseq will let you know if this happens!
@@ -145,15 +157,15 @@ getseq p53 mouse -j
 MTAMEESQSDISLELPLSQETFSGLWKLLPPEDILPSPHCMDDLLLPQDVEEFFEGPSEALRVSGAPAAQDPVTETPGPVAPAPATPWPLSSFVPSQKTYQGNYGFHLGFLQSGTAKSVMCTYSPPLNKLFCQLAKTCPVQLWVSATPPAGSRVRAMAIYKKSQHMTEVVRRCPHHERCSDGDGLAPPQHLIRVEGNLYPEYLEDRQTFRHSVVVPYEPPEAGSEYTTIHYKYMCNSSCMGGMNRRPILTIITLEDSSGNLLGRDSFEVRVCACPGRDRRTEEENFRKKEVLCPELPPGSAKRALPTCTSASPPQKKKPLDGEYFTLKIRGRKRFEMFRELNEALELKDAHATEESGDSRAHSSYLKTKKGQSTSRHKKTMVKKVGPDSD
 ```
 
-## Using getSequence from the Python:
+## Using getSequence from Python:
 
-getSequence has one function in Python called ``getseq``. To use it, Firt you need to import getseq.
+getSequence exposes ``getseq`` and ``batch_getseq`` in Python. To use them, first import the functions you need.
 ```python
-from getSequence import getseq
+from getSequence import getseq, batch_getseq
 ```
 Now you can use getseq.
   
-The ``getseq`` function can take either a string that is a single query or a list of strings for multiple queries. If it is a single query, by default it returns a list with the first entry in the list being the Uniprot header and the second one being the sequence. For multiple queries, a list of lists is returned. 
+The ``getseq`` function can take either a string that is a single query or a list of strings for multiple queries. If it is a single query, by default it returns a list with the first entry in the list being the Uniprot header and the second one being the sequence. For multiple queries, a list of lists is returned. Multiple Python queries are fetched in parallel and keep the same order as the input list.
 
 **Example - single query**
 ```python
@@ -165,6 +177,18 @@ getseq('p53')
 ```python
 getseq(['human p53', ' dog p53', ' mouse p53'])
 [['sp|p04637|p53 human cellular tumor antigen p53 os=homo sapiens ox=9606 gn=tp53 pe=1 sv=4', 'MEEPQSDPSVEPPLSQETFSDLWKLLPENNVLSPLPSQAMDDLMLSPDDIEQWFTEDPGPDEAPRMPEAAPPVAPAPAAPTPAAPAPAPSWPLSSSVPSQKTYQGSYGFRLGFLHSGTAKSVTCTYSPALNKMFCQLAKTCPVQLWVDSTPPPGTRVRAMAIYKQSQHMTEVVRRCPHHERCSDSDGLAPPQHLIRVEGNLRVEYLDDRNTFRHSVVVPYEPPEVGSDCTTIHYNYMCNSSCMGGMNRRPILTIITLEDSSGNLLGRNSFEVRVCACPGRDRRTEEENLRKKGEPHHELPPGSTKRALPNNTSSSPQPKKKPLDGEYFTLQIRGRERFEMFRELNEALELKDAQAGKEPGGSRAHSSHLKSKKGQSTSRHKKLMFKTEGPDSD'], ['sp|q29537|p53 canlf cellular tumor antigen p53 os=canis lupus familiaris ox=9615 gn=tp53 pe=2 sv=2', 'MEESQSELNIDPPLSQETFSELWNLLPENNVLSSELCPAVDELLLPESVVNWLDEDSDDAPRMPATSAPTAPGPAPSWPLSSSVPSPKTYPGTYGFRLGFLHSGTAKSVTWTYSPLLNKLFCQLAKTCPVQLWVSSPPPPNTCVRAMAIYKKSEFVTEVVRRCPHHERCSDSSDGLAPPQHLIRVEGNLRAKYLDDRNTFRHSVVVPYEPPEVGSDYTTIHYNYMCNSSCMGGMNRRPILTIITLEDSSGNVLGRNSFEVRVCACPGRDRRTEEENFHKKGEPCPEPPPGSTKRALPPSTSSSPPQKKKPLDGEYFTLQIRGRERYEMFRNLNEALELKDAQSGKEPGGSRAHSSHLKAKKGQSTSRHKKLMFKREGLDSD'], ['sp|p02340|p53 mouse cellular tumor antigen p53 os=mus musculus ox=10090 gn=tp53 pe=1 sv=4', 'MTAMEESQSDISLELPLSQETFSGLWKLLPPEDILPSPHCMDDLLLPQDVEEFFEGPSEALRVSGAPAAQDPVTETPGPVAPAPATPWPLSSFVPSQKTYQGNYGFHLGFLQSGTAKSVMCTYSPPLNKLFCQLAKTCPVQLWVSATPPAGSRVRAMAIYKKSQHMTEVVRRCPHHERCSDGDGLAPPQHLIRVEGNLYPEYLEDRQTFRHSVVVPYEPPEAGSEYTTIHYKYMCNSSCMGGMNRRPILTIITLEDSSGNLLGRDSFEVRVCACPGRDRRTEEENFRKKEVLCPELPPGSAKRALPTCTSASPPQKKKPLDGEYFTLKIRGRKRFEMFRELNEALELKDAHATEESGDSRAHSSYLKTKKGQSTSRHKKTMVKKVGPDSD']]
+```
+
+**Example - tune parallel workers**
+```python
+getseq(['human p53', 'dog p53', 'mouse p53'], max_workers=3)
+```
+
+The ``batch_getseq`` helper also fetches queries in parallel and accepts the same keyword arguments as ``getseq``. It is useful when you want to make the batch behavior explicit in your code.
+
+**Example - batch_getseq**
+```python
+batch_getseq(['human p53', 'dog p53', 'mouse p53'], max_workers=3)
 ```
 
 ### Additional usage in Python
@@ -214,6 +238,17 @@ Unable to retrieve sequence for the query ' doggggggg p53'
 ```
 
 ## Changes
+
+### V3.0
+* Replaced process-based multiprocessing with thread-based parallel fetching for list, batch, and CLI queries. This is much faster for network-bound UniProt requests and preserves the input order of results.
+* Simplified ``batch_getseq`` so it now uses the same optimized list-query path as ``getseq([...])`` instead of wrapping each query in an extra public-call layer.
+* Added ``max_workers`` for Python list/batch queries and ``--max-workers`` for CLI multi-query runs.
+* Added request timeouts and HTTP status checks so failed UniProt responses are reported consistently instead of being parsed as sequences.
+* Improved query parsing and result ranking around empty input, missing FASTA records, and headers without ``gn=`` or ``ox=`` fields.
+* Fixed saving output files to the current directory, such as ``-o output.fasta`` or ``output_file='output.fasta'``.
+* Made Python ``output_file`` writes force FASTA-compatible header/sequence data even when ``just_sequence=True`` is also passed.
+* Fixed empty comma-separated CLI entries and changed saved failed-query reports without an output directory to ``failed_queries.txt`` in the current directory.
+* Added regression tests covering ordered parallel batch results, current-directory output, worker validation, and ignored failures.
 
 ### V2.2 (October 2024)
 * Made pep517 compliant, now using tomls. h/t alex

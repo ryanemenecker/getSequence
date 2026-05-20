@@ -26,20 +26,16 @@ __all__ =  ['getseq',"batch_getseq"]
  
 ## main imports 
 import os
-import sys
-import urllib3
 import protfasta
-from multiprocessing import Pool
-from functools import partial
 
 ## internal imports
 from getSequence.get_sequence import getseq_from_string as _getseq_from_string
 from getSequence.get_sequence import get_seqs_from_list as _get_seqs_from_list
-from getSequence.getsequence_exceptions import RetreiveSequenceError
 
 
 def getseq(query, uniprot_id=False, just_sequence=False,
-    return_dict=False, ignore_failures=False, output_file=None):
+    return_dict=False, ignore_failures=False, output_file=None,
+    max_workers=None):
     '''
     User facing functionality to get sequences. 
 
@@ -58,6 +54,8 @@ def getseq(query, uniprot_id=False, just_sequence=False,
         Whether or not to ignore failures.
     output_file : str
         The output file to write the sequences to.
+    max_workers : int
+        Maximum number of parallel workers to use for list or batch queries.
 
     Returns
     -------
@@ -75,10 +73,10 @@ def getseq(query, uniprot_id=False, just_sequence=False,
     if output_file is not None:
         # set return_dict to True. Makes it easier to use protfasta. 
         return_dict=True
+        just_sequence=False
         # get the path and file
         path = os.path.dirname(output_file)
-        file = os.path.basename(output_file)
-        if os.path.exists(path)==False:
+        if path != '' and os.path.exists(path)==False:
             raise Exception(f'Path {path} does not exist.')        
     
     # check if we have a list
@@ -86,7 +84,7 @@ def getseq(query, uniprot_id=False, just_sequence=False,
         # get sequences from list
         values= _get_seqs_from_list(query, uniprot_id=uniprot_id, 
             just_sequence=just_sequence, return_dict=return_dict, 
-            ignore_failures=ignore_failures)
+            ignore_failures=ignore_failures, max_workers=max_workers)
         if output_file is not None:
            protfasta.write_fasta(values, output_file)
         else:
@@ -113,7 +111,7 @@ def getseq(query, uniprot_id=False, just_sequence=False,
     else:
         raise Exception('Query must be a string or a list of strings')
 
-def batch_getseq(queries, **kwargs):
+def batch_getseq(queries, max_workers=None, **kwargs):
     '''
     Parallel version of main user facing functionality to get sequences. 
 
@@ -132,6 +130,8 @@ def batch_getseq(queries, **kwargs):
         Whether or not to ignore failures.
     output_file : str
         The output file to write the sequences to.
+    max_workers : int
+        Maximum number of parallel workers to use for batch queries.
 
     Returns
     -------
@@ -146,14 +146,11 @@ def batch_getseq(queries, **kwargs):
 
     '''
     if isinstance(queries, str):
-        queries=([queries])
-    with Pool() as pool:
-        process_query_with_kwargs = partial(__process_query, **kwargs)
-        results = pool.map(process_query_with_kwargs, queries)
-    return results
+        queries = [queries]
+    else:
+        queries = list(queries)
 
-def __process_query(query, **kwargs):
-    return getseq(query, **kwargs)
+    return getseq(queries, max_workers=max_workers, **kwargs)
 
 
 
